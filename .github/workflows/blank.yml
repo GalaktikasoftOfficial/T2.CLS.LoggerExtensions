@@ -1,0 +1,86 @@
+name: .NET
+
+on:
+  push:
+    branches: 
+    - develop
+    - master
+    
+  pull_request:
+    branches: 
+    - master
+    - develop
+    
+  workflow_dispatch:
+
+jobs:
+  build:
+    
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 3.1.x
+      env:
+        NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        
+    - name: Install GitVersion
+      uses: gittools/actions/gitversion/setup@v0.9.8
+      with:
+        versionSpec: '5.x'
+    
+    - name: Display GitVersion config
+      id: gitversion
+      uses: gittools/actions/gitversion/execute@v0.9.8
+    
+    - name: Display varibles
+      run: |
+        echo "SemVer: ${{ steps.gitversion.outputs.semVer }}"
+        echo "Branch Name: ${{ steps.gitversion.outputs.branchName }}"
+        echo "Master Branch: ${{ contains(steps.gitversion.outputs.branchName, 'master') }}"
+        echo "Not Master Branch: ${{ !contains(steps.gitversion.outputs.branchName, 'master') }}"
+ 
+    - name: 'Dotnet NuGet Add Source'
+      run: dotnet nuget update source GitHub --source https://nuget.pkg.github.com/GalaktikasoftOfficial/index.json  --username GalaktikasoftOfficial --password ${{secrets.GITHUB_TOKEN}}
+      shell: pwsh
+    
+    - name: Restore dependencies T2.CLS.LoggerExtensions.Core
+      run: dotnet restore ./source/T2.CLS.LoggerExtensions/T2.CLS.LoggerExtensions.Core/T2.CLS.LoggerExtensions.Core.csproj
+      
+    - name: Restore dependencies T2.CLS.LoggerExtensions.NLog
+      run: dotnet restore ./source/T2.CLS.LoggerExtensions/T2.CLS.LoggerExtensions.Core/T2.CLS.LoggerExtensions.Core.csproj
+    
+    - name: Build T2.CLS.LoggerExtensions.Core
+      run: dotnet build ./source/T2.CLS.LoggerExtensions/T2.CLS.LoggerExtensions.Core/T2.CLS.LoggerExtensions.Core.csproj --configuration Release --disable-parallel -o ./bin/Release/
+    
+    - name: Build T2.CLS.LoggerExtensions.NLog
+      run: dotnet build ./source/T2.CLS.LoggerExtensions/T2.CLS.LoggerExtensions.NLog/T2.CLS.LoggerExtensions.NLog.csproj --configuration Release --disable-parallel -o ./bin/Release/
+       
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.gitversion.outputs.semVer }}
+        release_name: Build  ${{ steps.gitversion.outputs.semVer }}
+        draft: false
+        prerelease: ${{ !contains(steps.gitversion.outputs.branchName, 'master') }}
+        
+    - name: 'Dotnet NuGet Push T2.CLS.LoggerExtensions.Core'
+      run: dotnet nuget push ./bin/Release/T2.CLS.LoggerExtensions.Core.${{ steps.gitversion.outputs.semVer }}.nupkg --source GitHub --skip-duplicate
+      shell: pwsh
+      
+    - name: 'Dotnet NuGet Push T2.CLS.LoggerExtensions.NLog'
+      run: dotnet nuget push ./bin/Release/T2.CLS.LoggerExtensions.NLog.${{ steps.gitversion.outputs.semVer }}.nupkg --source GitHub --skip-duplicate
+      shell: pwsh
+    

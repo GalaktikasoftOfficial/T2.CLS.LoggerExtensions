@@ -1,0 +1,81 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<!--Пересборка при изменении данного файла-->
+	<PropertyGroup>
+		<MSBuildAllProjects>$(MSBuildThisFileFullPath);$(MSBuildAllProjects)</MSBuildAllProjects>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<authors>TopSoft</authors>
+		<owners>TopSoft</owners>
+		<RepositoryUrl>https://github.com/GalaktikasoftOfficial/T2.CLS.LoggerExtensions.git</RepositoryUrl> 
+    	<RepositoryType>git</RepositoryType> 
+	</PropertyGroup>
+
+	<ItemGroup Condition="'$(system_definitionId)' == ''"> 
+		<PackageReference Include="GitVersionTask" Version="5.5.1" >
+			<PrivateAssets>All</PrivateAssets>
+		</PackageReference>
+	</ItemGroup>
+	
+	<PropertyGroup Condition="'$(system_definitionId)' != ''"> 
+		<Version>$(GitVersion_SemVer)</Version>
+		<PackageVersion>$(GitVersion_FullSemVer)</PackageVersion>
+		<InformationalVersion>$(GitVersion_FullSemVer)</InformationalVersion>
+		<AssemblyVersion>$(GitVersion_AssemblySemVer)</AssemblyVersion>
+		<FileVersion>$(GitVersion_AssemblySemFileVer)</FileVersion>		
+	</PropertyGroup>
+	
+	
+	<!--<PropertyGroup>
+	  <SignAssembly>true</SignAssembly>
+	  <AssemblyOriginatorKeyFile>$(MSBuildThisFileDirectory)Key.snk</AssemblyOriginatorKeyFile>
+	</PropertyGroup>-->
+	
+	<!-- Определение пути сборки. Всё собирается в один каталог-->
+	<PropertyGroup>
+		<OutputPath>$(SolutionDir)bin\$(SolutionName)\$(MSBuildProjectName)\$(Configuration)\</OutputPath>
+		<PackageOutputPath>$(OutputPath)</PackageOutputPath>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(system_definitionId)' != ''">
+		<OutputPath>$(Build_BinariesDirectory)\Bin\$(MSBuildProjectName)\</OutputPath>
+		<PackageOutputPath>$(Build_BinariesDirectory)\Packages\</PackageOutputPath>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+	</PropertyGroup>
+	
+	<PropertyGroup>
+		<UseFullSemVerForNuGet>true</UseFullSemVerForNuGet>
+	</PropertyGroup>
+	
+	<ItemGroup>
+		<EmbeddedResource Include="**\*.xafml"/>
+		<EmbeddedResource Remove="bin\**\*.xafml"/>
+		<EmbeddedResource Update="Model.DesignedDiffs.Localization.*.xafml" SubType="Designer" DependentUpon="Model.DesignedDiffs.xafml"/>
+		<EmbeddedResource Update="Model.DesignedDiffs.xafml" SubType="Designer"/>
+		
+		<EmbeddedResource Update="**\*.resx">
+			<DesignTime>True</DesignTime>
+			<DependentUpon>%(FileName).cs</DependentUpon>
+		</EmbeddedResource>
+
+		<Compile Update="**\*.Designer.cs">
+			<DesignTime>True</DesignTime>
+			<DependentUpon>$([System.String]::Copy('%(FileName)').Replace('.Designer', '').Replace('.designer', '')).cs</DependentUpon>
+		</Compile>
+	</ItemGroup>
+	
+	<ItemGroup>
+		<CustomAdditionalCompileInputs Include="*.config"/>
+		<CustomAdditionalCompileInputs Include="*.json"/>
+	</ItemGroup>
+
+	<!--включение коданализа-->
+	<ItemGroup>
+	<PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="2.9.8">
+		<PrivateAssets>all</PrivateAssets>
+		<IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+	</PackageReference>
+  </ItemGroup>
+	
+</Project>
